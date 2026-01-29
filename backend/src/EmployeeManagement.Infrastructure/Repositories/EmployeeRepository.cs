@@ -8,10 +8,10 @@ namespace EmployeeManagement.Infrastructure.Repositories;
 public class EmployeeRepository(EmployeeDbContext context) : IEmployeeRepository
 {
     // Checks if document number already exists
-    public async Task<bool> ExistsByDocumentAsync(string documentNumber)
+    public async Task<bool> ExistsByDocumentAsync(string docNumber)
     {
         return await context.Employees
-            .AnyAsync(e => e.DocNumber == documentNumber);
+            .AnyAsync(e => e.DocNumber == docNumber);
     }
 
     // Gets employee by id

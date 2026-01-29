@@ -7,6 +7,9 @@ public record EmployeeResponseDTO(
     string FirstName,
     string LastName,
     string Email,
+    string DocNumber,
+    DateTime DateOfBirth,
     EmployeeRoleEnum Role,
-    Guid? ManagerId
+    Guid? ManagerId,
+    List<string> Phones
 );

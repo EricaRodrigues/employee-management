@@ -11,8 +11,13 @@ public static class EmployeeMappingExtensions
             employee.FirstName,
             employee.LastName,
             employee.Email,
+            employee.DocNumber,
+            employee.BirthDate,
             employee.Role,
-            employee.ManagerId
+            employee.ManagerId,
+            employee.Phones
+                .Select(p => p.Number)
+                .ToList()
         );
     }
 }

@@ -6,7 +6,7 @@ public record CreateEmployeeRequestDTO(
     string FirstName,
     string LastName,
     string Email,
-    string DocumentNumber,
+    string DocNumber,
     DateTime BirthDate,
     EmployeeRoleEnum Role,
     Guid? ManagerId,

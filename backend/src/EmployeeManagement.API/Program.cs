@@ -1,3 +1,4 @@
+using EmployeeManagement.API.Middlewares;
 using EmployeeManagement.Application.Services;
 using EmployeeManagement.Application.Services.Interfaces;
 using EmployeeManagement.Infrastructure.Context;
@@ -13,6 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Controllers
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // Application services
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
@@ -33,13 +36,16 @@ builder.Services.AddDbContext<EmployeeDbContext>(options =>
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionMiddleware>();
+
 // --------------------
 // // HTTP pipeline
 // // --------------------
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();

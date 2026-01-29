@@ -3,6 +3,7 @@
 
 # JetBrains Rider / IntelliJ
 **/.idea/
+**.DotSettings.user
 
 # .NET
 **/bin/

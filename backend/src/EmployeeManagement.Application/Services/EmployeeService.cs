@@ -5,11 +5,12 @@ using EmployeeManagement.Application.Services.Interfaces;
 using EmployeeManagement.Domain.Entities;
 using EmployeeManagement.Domain.Enums;
 using EmployeeManagement.Infrastructure.Repositories.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace EmployeeManagement.Application.Services;
 
 // Handles employee business rules
-public class EmployeeService(IEmployeeRepository employeeRepository) : IEmployeeService
+public class EmployeeService(IEmployeeRepository employeeRepository, ILogger<EmployeeService> logger) : IEmployeeService
 {
     // Get all employees
     public async Task<IEnumerable<EmployeeResponseDTO>> GetAllAsync()
@@ -62,6 +63,13 @@ public class EmployeeService(IEmployeeRepository employeeRepository) : IEmployee
         }
 
         await employeeRepository.AddAsync(employee);
+        
+        logger.LogInformation(
+            "Employee created. EmployeeId: {EmployeeId}, CreatedBy: {CurrentEmployeeId}, Role: {Role}",
+            employee.Id,
+            currentEmployeeId,
+            employee.Role
+        );
 
         // Map entity to response
         return employee.ToResponse();
@@ -154,6 +162,12 @@ public class EmployeeService(IEmployeeRepository employeeRepository) : IEmployee
             employee.AddPhone(new Phone(phone));
 
         await employeeRepository.UpdateAsync(employee);
+        
+        logger.LogInformation(
+            "Employee updated. EmployeeId: {EmployeeId}, UpdatedBy: {CurrentEmployeeId}",
+            employee.Id,
+            currentEmployeeId
+        );
 
         return employee.ToResponse();
     }
@@ -191,6 +205,13 @@ public class EmployeeService(IEmployeeRepository employeeRepository) : IEmployee
         }
 
         await employeeRepository.DeleteAsync(employeeToDelete);
+        
+        logger.LogWarning(
+            "Employee deleted. EmployeeId: {EmployeeId}, DeletedBy: {CurrentEmployeeId}, DeletedRole: {Role}",
+            employeeToDelete.Id,
+            currentEmployeeId,
+            employeeToDelete.Role
+        );
     }
 
     // Checks if employee is adult

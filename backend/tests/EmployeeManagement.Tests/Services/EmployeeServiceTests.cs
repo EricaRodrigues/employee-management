@@ -4,6 +4,7 @@ using EmployeeManagement.Application.Services;
 using EmployeeManagement.Domain.Enums;
 using EmployeeManagement.Infrastructure.Repositories.Interfaces;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace EmployeeManagement.Tests.Services;
@@ -26,6 +27,14 @@ public class EmployeeServiceTests
         );
     }
     
+    private static EmployeeService CreateService(
+        Mock<IEmployeeRepository> repositoryMock
+    )
+    {
+        var loggerMock = new Mock<ILogger<EmployeeService>>();
+        return new EmployeeService(repositoryMock.Object, loggerMock.Object);
+    }
+    
     [Fact]
     public async Task GetAllAsync_ShouldReturnEmptyList_WhenNoEmployeesExist()
     {
@@ -35,7 +44,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetAllAsync())
             .ReturnsAsync(new List<Employee>());
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var result = await service.GetAllAsync();
 
@@ -73,7 +82,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetAllAsync())
             .ReturnsAsync(employees);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var result = await service.GetAllAsync();
 
@@ -89,7 +98,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync((Employee?)null);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         Func<Task> act = async () =>
             await service.GetByIdAsync(Guid.NewGuid());
@@ -119,7 +128,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(employee);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var result = await service.GetByIdAsync(Guid.NewGuid());
 
@@ -155,7 +164,7 @@ public class EmployeeServiceTests
             .Setup(r => r.AddAsync(It.IsAny<Employee>()))
             .Returns(Task.CompletedTask);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new CreateEmployeeRequestDTO(
             FirstName: "Erica",
@@ -201,7 +210,7 @@ public class EmployeeServiceTests
             .Setup(r => r.AddAsync(It.IsAny<Employee>()))
             .Returns(Task.CompletedTask);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new CreateEmployeeRequestDTO(
             FirstName: "Erica",
@@ -242,7 +251,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(currentEmployee);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new CreateEmployeeRequestDTO(
             FirstName: "Erica",
@@ -279,7 +288,7 @@ public class EmployeeServiceTests
             .Setup(r => r.ExistsByDocumentAsync(It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new CreateEmployeeRequestDTO(
             "Erica",
@@ -321,7 +330,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetByIdAsync(It.Is<Guid>(id => id == managerId)))
             .ReturnsAsync((Employee?)null);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new CreateEmployeeRequestDTO(
             FirstName: "Erica",
@@ -367,7 +376,7 @@ public class EmployeeServiceTests
             .Setup(r => r.ExistsByDocumentAsync(It.IsAny<string>()))
             .ReturnsAsync(false);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new CreateEmployeeRequestDTO(
             "New",
@@ -393,18 +402,18 @@ public class EmployeeServiceTests
     [Fact]
     public async Task UpdateAsync_ShouldUpdateEmployee_WhenValid()
     {
-        var repo = new Mock<IEmployeeRepository>();
+        var repositoryMock = new Mock<IEmployeeRepository>();
 
         var current = CreateEmployee(EmployeeRoleEnum.Director);
         var employee = CreateEmployee(EmployeeRoleEnum.Employee);
 
-        repo.Setup(r => r.GetByIdAsync(employee.Id)).ReturnsAsync(employee);
-        repo.Setup(r => r.GetByIdAsync(current.Id)).ReturnsAsync(current);
-        repo.Setup(r => r.ExistsByDocumentAsync(It.IsAny<string>())).ReturnsAsync(false);
-        repo.Setup(r => r.UpdateAsync(It.IsAny<Employee>()))
+        repositoryMock.Setup(r => r.GetByIdAsync(employee.Id)).ReturnsAsync(employee);
+        repositoryMock.Setup(r => r.GetByIdAsync(current.Id)).ReturnsAsync(current);
+        repositoryMock.Setup(r => r.ExistsByDocumentAsync(It.IsAny<string>())).ReturnsAsync(false);
+        repositoryMock.Setup(r => r.UpdateAsync(It.IsAny<Employee>()))
             .Returns(Task.CompletedTask);
 
-        var service = new EmployeeService(repo.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new UpdateEmployeeRequestDTO(
             "New",
@@ -425,15 +434,15 @@ public class EmployeeServiceTests
     [Fact]
     public async Task UpdateAsync_ShouldFail_WhenRoleIsHigherThanCurrent()
     {
-        var repo = new Mock<IEmployeeRepository>();
+        var repositoryMock = new Mock<IEmployeeRepository>();
 
         var leader = CreateEmployee(EmployeeRoleEnum.Leader);
         var employee = CreateEmployee(EmployeeRoleEnum.Employee);
 
-        repo.Setup(r => r.GetByIdAsync(employee.Id)).ReturnsAsync(employee);
-        repo.Setup(r => r.GetByIdAsync(leader.Id)).ReturnsAsync(leader);
+        repositoryMock.Setup(r => r.GetByIdAsync(employee.Id)).ReturnsAsync(employee);
+        repositoryMock.Setup(r => r.GetByIdAsync(leader.Id)).ReturnsAsync(leader);
 
-        var service = new EmployeeService(repo.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new UpdateEmployeeRequestDTO(
             employee.FirstName,
@@ -457,13 +466,13 @@ public class EmployeeServiceTests
     [Fact]
     public async Task UpdateAsync_ShouldFail_WhenSelfRoleChange()
     {
-        var repo = new Mock<IEmployeeRepository>();
+        var repositoryMock = new Mock<IEmployeeRepository>();
 
         var director = CreateEmployee(EmployeeRoleEnum.Director);
 
-        repo.Setup(r => r.GetByIdAsync(director.Id)).ReturnsAsync(director);
+        repositoryMock.Setup(r => r.GetByIdAsync(director.Id)).ReturnsAsync(director);
 
-        var service = new EmployeeService(repo.Object);
+        var service = CreateService(repositoryMock);
 
         var request = new UpdateEmployeeRequestDTO(
             director.FirstName,
@@ -488,7 +497,7 @@ public class EmployeeServiceTests
     public async Task DeleteAsync_ShouldThrowException_WhenDeletingYourself()
     {
         var repositoryMock = new Mock<IEmployeeRepository>();
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var id = Guid.NewGuid();
 
@@ -510,7 +519,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync((Employee?)null);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         Func<Task> act = async () =>
             await service.DeleteAsync(Guid.NewGuid(), Guid.NewGuid());
@@ -536,7 +545,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetByIdAsync(It.Is<Guid>(id => id != currentEmployee.Id)))
             .ReturnsAsync((Employee?)null);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         Func<Task> act = async () =>
             await service.DeleteAsync(Guid.NewGuid(), currentEmployee.Id);
@@ -563,7 +572,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetByIdAsync(targetEmployee.Id))
             .ReturnsAsync(targetEmployee);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         Func<Task> act = async () =>
             await service.DeleteAsync(targetEmployee.Id, currentEmployee.Id);
@@ -590,7 +599,7 @@ public class EmployeeServiceTests
             .Setup(r => r.GetByIdAsync(targetEmployee.Id))
             .ReturnsAsync(targetEmployee);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         Func<Task> act = async () =>
             await service.DeleteAsync(targetEmployee.Id, currentEmployee.Id);
@@ -621,7 +630,7 @@ public class EmployeeServiceTests
             .Setup(r => r.DeleteAsync(targetEmployee))
             .Returns(Task.CompletedTask);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         await service.DeleteAsync(targetEmployee.Id, currentEmployee.Id);
 
@@ -651,7 +660,7 @@ public class EmployeeServiceTests
             .Setup(r => r.DeleteAsync(targetEmployee))
             .Returns(Task.CompletedTask);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         await service.DeleteAsync(targetEmployee.Id, currentEmployee.Id);
 
@@ -681,7 +690,7 @@ public class EmployeeServiceTests
             .Setup(r => r.DeleteAsync(targetDirector))
             .Returns(Task.CompletedTask);
 
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         await service.DeleteAsync(targetDirector.Id, currentDirector.Id);
 
@@ -695,7 +704,7 @@ public class EmployeeServiceTests
     public async Task DeleteAsync_ShouldThrowException_WhenDirectorDeletesHimself()
     {
         var repositoryMock = new Mock<IEmployeeRepository>();
-        var service = new EmployeeService(repositoryMock.Object);
+        var service = CreateService(repositoryMock);
 
         var directorId = Guid.NewGuid();
 

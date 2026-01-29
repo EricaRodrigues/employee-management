@@ -5,6 +5,7 @@ using EmployeeManagement.Domain.Enums;
 using EmployeeManagement.Infrastructure.Repositories.Interfaces;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace EmployeeManagement.Tests.Services;
@@ -28,6 +29,15 @@ public class AuthServiceTests
             .Build();
     }
     
+    private static AuthService CreateService(
+        Mock<IEmployeeRepository> repositoryMock
+    )
+    {
+        var loggerMock = new Mock<ILogger<AuthService>>();
+        var configuration = CreateFakeConfiguration();
+        return new AuthService(repositoryMock.Object, configuration, loggerMock.Object);
+    }
+    
     [Fact]
     public async Task LoginAsync_ShouldThrowException_WhenEmailDoesNotExist()
     {
@@ -37,9 +47,7 @@ public class AuthServiceTests
             .Setup(r => r.GetByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((Employee?)null);
 
-        var configuration = CreateFakeConfiguration();
-
-        var service = new AuthService(repositoryMock.Object, configuration);
+        var service = CreateService(repositoryMock);
 
         var request = new LoginRequestDTO(
             Email: "invalid@company.com",
@@ -74,9 +82,7 @@ public class AuthServiceTests
             .Setup(r => r.GetByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync(employee);
 
-        var configuration = CreateFakeConfiguration();
-
-        var service = new AuthService(repositoryMock.Object, configuration);
+        var service = CreateService(repositoryMock);
 
         var request = new LoginRequestDTO(
             Email: "erica@company.com",
@@ -114,9 +120,7 @@ public class AuthServiceTests
             .Setup(r => r.GetByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync(employee);
 
-        var configuration = CreateFakeConfiguration();
-
-        var service = new AuthService(repositoryMock.Object, configuration);
+        var service = CreateService(repositoryMock);
 
         var request = new LoginRequestDTO(
             Email: "erica@company.com",

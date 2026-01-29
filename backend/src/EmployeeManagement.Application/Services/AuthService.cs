@@ -6,6 +6,7 @@ using EmployeeManagement.Infrastructure.Repositories.Interfaces;
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace EmployeeManagement.Application.Services;
@@ -13,7 +14,8 @@ namespace EmployeeManagement.Application.Services;
 // Handles authentication and JWT generation
 public class AuthService(
     IEmployeeRepository employeeRepository,
-    IConfiguration configuration
+    IConfiguration configuration,
+    ILogger<AuthService> logger
 ) : IAuthService
 {
     // Validates user credentials and returns a JWT token
@@ -22,12 +24,32 @@ public class AuthService(
         var employee = await employeeRepository.GetByEmailAsync(request.Email);
 
         if (employee is null)
+        {
+            logger.LogWarning(
+                "Invalid login attempt. Email not found: {Email}",
+                request.Email
+            );
+
             throw new BusinessException("Invalid credentials.");
+        }
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, employee.PasswordHash))
+        {
+            logger.LogWarning(
+                "Invalid login attempt. Wrong password for Email: {Email}",
+                request.Email
+            );
+
             throw new BusinessException("Invalid credentials.");
+        }
 
         var token = GenerateToken(employee);
+        
+        logger.LogInformation(
+            "User logged in successfully. EmployeeId: {EmployeeId}, Role: {Role}",
+            employee.Id,
+            employee.Role
+        );
 
         return new LoginResponseDTO(token);
     }

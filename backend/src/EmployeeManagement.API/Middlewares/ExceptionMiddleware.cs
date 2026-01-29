@@ -15,27 +15,45 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         }
         catch (BusinessException ex)
         {
-            logger.LogWarning(ex, "Business exception occurred");
+            // Business rule error (expected)
+            logger.LogWarning(ex, "Business rule violation");
 
-            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            context.Response.ContentType = "application/json";
-
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new
-            {
-                error = ex.Message
-            }));
+            await HandleExceptionAsync(
+                context,
+                HttpStatusCode.BadRequest,
+                ex.Message
+            );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception occurred");
+            // Unexpected error
+            logger.LogError(ex, "Unhandled exception");
 
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            context.Response.ContentType = "application/json";
-
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new
-            {
-                error = "An unexpected error occurred."
-            }));
+            await HandleExceptionAsync(
+                context,
+                HttpStatusCode.InternalServerError,
+                "An unexpected error occurred."
+            );
         }
+    }
+    
+    
+    private static async Task HandleExceptionAsync(
+        HttpContext context,
+        HttpStatusCode statusCode,
+        string message
+    )
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)statusCode;
+
+        var response = new
+        {
+            error = message
+        };
+
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(response)
+        );
     }
 }

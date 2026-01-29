@@ -12,7 +12,7 @@ public class Employee
 
     public DateTime BirthDate { get; private set; }
 
-    public EmployeeRole Role { get; private set; }
+    public EmployeeRoleEnum Role { get; private set; }
 
     public Guid? ManagerId { get; private set; }
     public Employee? Manager { get; private set; }
@@ -29,7 +29,7 @@ public class Employee
         string email,
         string docNumber,
         DateTime birthDate,
-        EmployeeRole role,
+        EmployeeRoleEnum role,
         string passwordHash,
         Guid? managerId = null
     )
@@ -45,7 +45,7 @@ public class Employee
         ManagerId = managerId;
     }
 
-    public void ChangeRole(EmployeeRole role)
+    public void ChangeRole(EmployeeRoleEnum role)
     {
         Role = role;
     }

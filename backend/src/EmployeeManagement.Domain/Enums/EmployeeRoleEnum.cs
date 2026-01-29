@@ -1,6 +1,6 @@
 namespace EmployeeManagement.Domain.Enums;
 
-public enum EmployeeRole
+public enum EmployeeRoleEnum
 {
     Employee = 1,
     Leader = 2,

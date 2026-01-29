@@ -1,0 +1,64 @@
+using EmployeeManagement.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace EmployeeManagement.Infrastructure.Context;
+
+// DbContext responsible for database access
+public class EmployeeDbContext(DbContextOptions<EmployeeDbContext> options) : DbContext(options)
+{
+
+    // Employees table
+    public DbSet<Employee> Employees => Set<Employee>();
+
+    // Phones table
+    public DbSet<Phone> Phones => Set<Phone>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // Employee mapping
+        modelBuilder.Entity<Employee>(builder =>
+        {
+            // Primary key
+            builder.HasKey(e => e.Id);
+
+            // Required fields
+            builder.Property(e => e.FirstName).IsRequired();
+            builder.Property(e => e.LastName).IsRequired();
+            builder.Property(e => e.Email).IsRequired();
+            builder.Property(e => e.DocNumber).IsRequired();
+            builder.Property(e => e.PasswordHash).IsRequired();
+
+            // Unique document number
+            builder.HasIndex(e => e.DocNumber).IsUnique();
+
+            // One employee can have many phones
+            // EmployeeId is a shadow property (not in domain)
+            builder
+                .HasMany(e => e.Phones)
+                .WithOne()
+                .HasForeignKey("EmployeeId");
+
+            // Self reference for manager relationship
+            builder
+                .HasOne(e => e.Manager)
+                .WithMany()
+                .HasForeignKey(e => e.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Phone mapping
+        modelBuilder.Entity<Phone>(builder =>
+        {
+            // Shadow primary key, used only by EF
+            // Phone does not have identity in the domain
+            builder.Property<Guid>("Id");
+            builder.HasKey("Id");
+
+            // Phone number is required
+            builder.Property(p => p.Number)
+                .IsRequired();
+        });
+
+        base.OnModelCreating(modelBuilder);
+    }
+}

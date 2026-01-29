@@ -7,6 +7,16 @@ namespace EmployeeManagement.Infrastructure.Repositories;
 // Handles employee database operations
 public class EmployeeRepository(EmployeeDbContext context) : IEmployeeRepository
 {
+    // Get all employees
+    public async Task<IEnumerable<Employee>> GetAllAsync()
+    {
+        return await context.Employees
+            .Include(e => e.Phones)
+            .Include(e => e.Manager)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+    
     // Checks if document number already exists
     public async Task<bool> ExistsByDocumentAsync(string docNumber)
     {
@@ -33,6 +43,20 @@ public class EmployeeRepository(EmployeeDbContext context) : IEmployeeRepository
     public async Task AddAsync(Employee employee)
     {
         context.Employees.Add(employee);
+        await context.SaveChangesAsync();
+    }
+    
+    // Updates an employee
+    public async Task UpdateAsync(Employee employee)
+    {
+        context.Employees.Update(employee);
+        await context.SaveChangesAsync();
+    }
+
+    // Delete an employee
+    public async Task DeleteAsync(Employee employee)
+    {
+        context.Employees.Remove(employee);
         await context.SaveChangesAsync();
     }
 }

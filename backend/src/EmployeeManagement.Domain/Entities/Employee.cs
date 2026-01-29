@@ -5,16 +5,14 @@ public class Employee
 {
     public Guid Id { get; private set; }
 
-    public string FirstName { get; private set; }
-    public string LastName { get; private set; }
-    public string Email { get; private set; }
-    public string DocNumber { get; private set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Email { get; set; }
+    public string DocNumber { get; set; }
+    public DateTime BirthDate { get; set; }
+    public EmployeeRoleEnum Role { get; set; }
 
-    public DateTime BirthDate { get; private set; }
-
-    public EmployeeRoleEnum Role { get; private set; }
-
-    public Guid? ManagerId { get; private set; }
+    public Guid? ManagerId { get; set; }
     public Employee? Manager { get; private set; }
 
     public ICollection<Phone> Phones { get; private set; } = new List<Phone>();
@@ -43,11 +41,6 @@ public class Employee
         Role = role;
         PasswordHash = passwordHash;
         ManagerId = managerId;
-    }
-
-    public void ChangeRole(EmployeeRoleEnum role)
-    {
-        Role = role;
     }
 
     public void AddPhone(Phone phone)

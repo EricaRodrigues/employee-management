@@ -11,6 +11,22 @@ namespace EmployeeManagement.API.Controllers;
 [Route("api/[controller]")]
 public class EmployeesController(IEmployeeService employeeService) : ControllerBase
 {
+    // Get all employees
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await employeeService.GetAllAsync();
+        return Ok(result);
+    }
+    
+    // Gets employee by id
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var result = await employeeService.GetByIdAsync(id);
+        return Ok(result);
+    }
+    
     // Creates a new employee
     [Authorize(Roles = "Leader,Director")]
     [HttpPost]
@@ -22,13 +38,16 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
 
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
-
-    // Gets employee by id
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    
+    // Deletes an employee
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var result = await employeeService.GetByIdAsync(id);
-        return Ok(result);
+        var currentEmployeeId = GetCurrentEmployeeId();
+
+        await employeeService.DeleteAsync(id, currentEmployeeId);
+
+        return NoContent();
     }
 
     // Reads employee id from JWT claims

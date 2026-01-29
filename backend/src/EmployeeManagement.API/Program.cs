@@ -1,4 +1,5 @@
 using System.Text;
+using EmployeeManagement.API.Extensions;
 using EmployeeManagement.API.Middlewares;
 using EmployeeManagement.Application.Services;
 using EmployeeManagement.Application.Services.Interfaces;
@@ -95,6 +96,9 @@ builder.Host.UseSerilog();
 // --------------------
 
 var app = builder.Build();
+
+// Apply database migrations automatically
+app.ApplyMigrations();
 
 // Global exception handling
 app.UseMiddleware<ExceptionMiddleware>();

@@ -1,4 +1,5 @@
 using EmployeeManagement.Domain.Entities;
+using EmployeeManagement.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeManagement.Infrastructure.Context;
@@ -15,6 +16,8 @@ public class EmployeeDbContext(DbContextOptions<EmployeeDbContext> options) : Db
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+        
         // Employee mapping
         modelBuilder.Entity<Employee>(builder =>
         {
@@ -59,6 +62,28 @@ public class EmployeeDbContext(DbContextOptions<EmployeeDbContext> options) : Db
                 .IsRequired();
         });
 
-        base.OnModelCreating(modelBuilder);
+        // ------------------------------------------------------------
+        // Seed Data
+        // ------------------------------------------------------------
+
+        // Seed admin user to bootstrap the application (demo purpose)
+        var adminId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        modelBuilder.Entity<Employee>().HasData(
+            new
+            {
+                Id = adminId,
+                FirstName = "Admin",
+                LastName = "Director",
+                Email = "admin@company.com",
+                DocNumber = "00000000001",
+                BirthDate = DateTime.SpecifyKind(
+                    new DateTime(1992, 4, 2),
+                    DateTimeKind.Utc
+                ),
+                Role = EmployeeRoleEnum.Director,
+                ManagerId = (Guid?)null,
+                PasswordHash = "$2a$11$Ey8TKH0BmJnmnsg1ei30OuG0.N9CdgxGWaDiTtCwFzLN9p2fBMIh6" //Admin@123
+            }
+        );
     }
 }

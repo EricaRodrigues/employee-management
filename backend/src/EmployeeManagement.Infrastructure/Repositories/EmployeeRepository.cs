@@ -21,6 +21,13 @@ public class EmployeeRepository(EmployeeDbContext context) : IEmployeeRepository
             .Include(e => e.Phones)
             .FirstOrDefaultAsync(e => e.Id == id);
     }
+    
+    // Gets employee by email
+    public async Task<Employee?> GetByEmailAsync(string email)
+    {
+        return await context.Employees
+            .FirstOrDefaultAsync(e => e.Email == email);
+    }
 
     // Saves new employee
     public async Task AddAsync(Employee employee)

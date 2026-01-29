@@ -2,14 +2,17 @@ using EmployeeManagement.Application.DTOs;
 using EmployeeManagement.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace EmployeeManagement.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class EmployeesController(IEmployeeService employeeService) : ControllerBase
 {
-    // POST api/employees
+    // Creates a new employee
+    [Authorize(Roles = "Leader,Director")]
     [HttpPost]
     public async Task<IActionResult> Create(CreateEmployeeRequestDTO request)
     {
@@ -20,7 +23,7 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
-    // GET api/employees/{id}
+    // Gets employee by id
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -28,6 +31,7 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
         return Ok(result);
     }
 
+    // Reads employee id from JWT claims
     private Guid GetCurrentEmployeeId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier);

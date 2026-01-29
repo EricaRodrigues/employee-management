@@ -24,13 +24,14 @@ public class EmployeeService(IEmployeeRepository employeeRepository) : IEmployee
     // Creates a new employee
     public async Task<EmployeeResponseDTO> CreateAsync(CreateEmployeeRequestDTO request, Guid currentEmployeeId)
     {
-        // // Get current logged employee from database
-        // var currentEmployee = await employeeRepository.GetByIdAsync(currentEmployeeId);
-        // if (currentEmployee is null)
-        //     throw new BusinessException("Current user not found.");
+        // Get current logged employee from database
+        var currentEmployee = await employeeRepository.GetByIdAsync(currentEmployeeId);
+
+        if (currentEmployee is null)
+            throw new BusinessException("Current user not found.");
         
         // Validate business rules
-        await ValidateBusinessRules(request);
+        await ValidateBusinessRules(request, currentEmployee);
 
         // Hash password using BCrypt
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -58,25 +59,17 @@ public class EmployeeService(IEmployeeRepository employeeRepository) : IEmployee
     }
     
     // Validates employee creation rules
-    private async Task ValidateBusinessRules(CreateEmployeeRequestDTO request)
+    private async Task ValidateBusinessRules(CreateEmployeeRequestDTO request, Employee currentEmployee)
     {
-        // Temporary rule: first employee can be created without a manager
-        if (request.ManagerId.HasValue)
-        {
-            var manager = await employeeRepository.GetByIdAsync(request.ManagerId.Value);
-            if (manager is null)
-                throw new BusinessException("Manager not found.");
-        }
-        
         // Validate age
         if (!IsAdult(request.BirthDate))
             throw new BusinessException("Employee must be at least 18 years old.");
         
-        // // Validate role permission
-        // if (request.Role > currentEmployee.Role)
-        //     throw new BusinessException(
-        //         "You cannot create a user with higher permissions than yours."
-        //     );
+        // Validate role permission
+        if (request.Role > currentEmployee.Role)
+            throw new BusinessException(
+                "You cannot create a user with higher permissions than yours."
+            );
         
         // Validate unique document number
         if (await employeeRepository.ExistsByDocumentAsync(request.DocNumber))

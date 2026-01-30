@@ -28,7 +28,6 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
     }
     
     // Creates a new employee
-    [Authorize(Roles = "Leader,Director")]
     [HttpPost]
     public async Task<IActionResult> Create(CreateEmployeeRequestDTO request)
     {
@@ -37,6 +36,23 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
         var result = await employeeService.CreateAsync(request, currentEmployeeId);
 
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+    }
+    
+    // Updates an employee
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        UpdateEmployeeRequestDTO request)
+    {
+        var currentEmployeeId = GetCurrentEmployeeId();
+
+        var result = await employeeService.UpdateAsync(
+            id,
+            request,
+            currentEmployeeId
+        );
+
+        return Ok(result);
     }
     
     // Deletes an employee

@@ -8,3 +8,9 @@
 # .NET
 **/bin/
 **/obj/
+
+
+#backend and frontend
+node_modules/
+**/logs/
+.env

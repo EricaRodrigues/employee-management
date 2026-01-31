@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: employee_management_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: employee_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10  
+        
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: employee_management_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=employee_db;Username=postgres;Password=postgres
+      Jwt__Key: e93b0761ac89b47974a69b5121e0f4cfdd77a847d37ae73e5a904cb08fa79843!
+      Jwt__Issuer: EmployeeManagement
+      Jwt__Audience: EmployeeManagement
+    ports:
+      - "8080:8080"      
+
+volumes:
+  postgres_data:

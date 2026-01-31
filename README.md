@@ -69,7 +69,7 @@ An employee must:
 - Must be at least 18 years old
 - Unique email and document number
 - Can have zero or more phone numbers
-- Optionally manager (another employee)
+- Optional manager (another employee)
 
 ---
 
@@ -139,7 +139,7 @@ A default admin user is created via migration to simplify testing:
 
 ```bash
 Email: admin@company.com
-Password: admin123
+Password: Admin@123
 Role: Director
 ```
 
@@ -254,6 +254,18 @@ The app consumes a .NET 8 REST API and focuses on clean UI, proper validations, 
 ## Running the Project
 
 From the `frontend` folder:
+
+## Environment variables
+
+This project uses environment variables to configure the API URL.
+
+Before running the frontend, create a `.env` file based on the example:
+
+```bash
+cp .env.example .env
+```
+
+And After
 
 ```bash
 npm install

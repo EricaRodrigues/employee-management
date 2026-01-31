@@ -41,7 +41,7 @@ public class EmployeeService(IEmployeeRepository employeeRepository, ILogger<Emp
             throw new BusinessException("Current user not found.");
 
         // Validate business rules
-        await ValidateBusinessRules(request, currentEmployee);
+        await ValidateCreateBusinessRules(request, currentEmployee);
 
         // Hash password using BCrypt
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -76,21 +76,35 @@ public class EmployeeService(IEmployeeRepository employeeRepository, ILogger<Emp
     }
 
     // Validates employee creation rules
-    private async Task ValidateBusinessRules(CreateEmployeeRequestDTO request, Employee currentEmployee)
+    private async Task ValidateCreateBusinessRules(CreateEmployeeRequestDTO request, Employee currentEmployee)
     {
         // Validate age
         if (!IsAdult(request.BirthDate))
             throw new BusinessException("Employee must be at least 18 years old.");
 
-        // Validate role permission
-        if (request.Role > currentEmployee.Role)
-            throw new BusinessException(
-                "You cannot create a user with higher permissions than yours."
-            );
+        // Validate permission rules
+        switch (currentEmployee.Role)
+        {
+            case EmployeeRoleEnum.Employee:
+                throw new BusinessException("You are not allowed to create users.");
+
+            case EmployeeRoleEnum.Leader:
+                if (request.Role != EmployeeRoleEnum.Employee)
+                    throw new BusinessException("Leaders can only create employees.");
+                break;
+
+            case EmployeeRoleEnum.Director:
+                // Director can create any role
+                break;
+        }
 
         // Validate unique document number
         if (await employeeRepository.ExistsByDocumentAsync(request.DocNumber))
             throw new BusinessException("Document number already exists.");
+        
+        // Validate unique email
+        if (await employeeRepository.ExistsByEmailAsync(request.Email))
+            throw new BusinessException("Email already exists.");
 
         // Validate manager
         if (request.ManagerId.HasValue)
@@ -99,6 +113,22 @@ public class EmployeeService(IEmployeeRepository employeeRepository, ILogger<Emp
 
             if (manager is null)
                 throw new BusinessException("Manager not found.");
+
+            // Manager rules
+            switch (manager.Role)
+            {
+                case EmployeeRoleEnum.Employee:
+                    throw new BusinessException("Employee cannot be a manager.");
+
+                case EmployeeRoleEnum.Leader:
+                    if (request.Role != EmployeeRoleEnum.Employee)
+                        throw new BusinessException("Leader can only manage employees.");
+                    break;
+
+                case EmployeeRoleEnum.Director:
+                    // Director can manage anyone
+                    break;
+            }
         }
     }
 
@@ -116,36 +146,10 @@ public class EmployeeService(IEmployeeRepository employeeRepository, ILogger<Emp
 
         if (currentEmployee is null)
             throw new BusinessException("Current user not found.");
-
-        // Age validation
-        if (!IsAdult(request.BirthDate))
-            throw new BusinessException("Employee must be at least 18 years old.");
-
-        // Role rules
-        if (employee.Id == currentEmployee.Id && request.Role != employee.Role)
-            throw new BusinessException("You cannot change your own role.");
-
-        if (request.Role > currentEmployee.Role)
-            throw new BusinessException(
-                "You cannot assign a role higher than yours."
-            );
-
-        // DocNumber uniqueness
-        if (employee.DocNumber != request.DocNumber &&
-            await employeeRepository.ExistsByDocumentAsync(request.DocNumber))
-            throw new BusinessException("Document number already exists.");
-
-        // Manager validation
-        if (request.ManagerId.HasValue)
-        {
-            if (request.ManagerId == employee.Id)
-                throw new BusinessException("Employee cannot be their own manager.");
-
-            var manager = await employeeRepository.GetByIdAsync(request.ManagerId.Value);
-
-            if (manager is null)
-                throw new BusinessException("Manager not found.");
-        }
+        
+        
+        // Validate business rules
+        await ValidateUpdateBusinessRules(request, employee, currentEmployee);
 
         // Apply updates
         employee.FirstName = request.FirstName;
@@ -171,6 +175,69 @@ public class EmployeeService(IEmployeeRepository employeeRepository, ILogger<Emp
 
         return employee.ToResponse();
     }
+    
+    // Validates employee update rules
+    private async Task ValidateUpdateBusinessRules(UpdateEmployeeRequestDTO request, Employee employee, Employee currentEmployee)
+    {
+        // Authorization: who can edit whom
+        if (employee.Id != currentEmployee.Id)
+        {
+            switch (currentEmployee.Role)
+            {
+                case EmployeeRoleEnum.Employee:
+                    throw new BusinessException("You are not allowed to edit other users.");
+
+                case EmployeeRoleEnum.Leader:
+                    if (employee.Role != EmployeeRoleEnum.Employee)
+                        throw new BusinessException("You can only edit employees.");
+                    break;
+
+                case EmployeeRoleEnum.Director:
+                    // Director can edit anyone
+                    break;
+            }
+        }
+
+        // Age validation
+        if (!IsAdult(request.BirthDate))
+            throw new BusinessException("Employee must be at least 18 years old.");
+
+        // Role rules
+        if (employee.Id == currentEmployee.Id && request.Role != employee.Role)
+            throw new BusinessException("You cannot change your own role.");
+
+        if (request.Role > currentEmployee.Role)
+            throw new BusinessException(
+                "You cannot assign a role higher than yours."
+            );
+
+        // DocNumber unique
+        if (employee.DocNumber != request.DocNumber &&
+            await employeeRepository.ExistsByDocumentAsync(request.DocNumber))
+            throw new BusinessException("Document number already exists.");
+        
+        // Email unique
+        if (employee.Email != request.Email &&
+            await employeeRepository.ExistsByEmailAsync(request.Email))
+        {
+            throw new BusinessException("Email already in use.");
+        }
+
+        // Manager validation
+        if (request.ManagerId.HasValue)
+        {
+            if (request.ManagerId == employee.Id)
+                throw new BusinessException("Employee cannot be their own manager.");
+
+            var manager = await employeeRepository.GetByIdAsync(request.ManagerId.Value);
+            if (manager is null)
+                throw new BusinessException("Manager not found.");
+            
+            if (manager.Role <= employee.Role)
+                throw new BusinessException("Manager must have a higher role.");
+        }
+    }
+
 
     // Deletes an employee respecting role hierarchy
     public async Task DeleteAsync(Guid employeeId, Guid currentEmployeeId)

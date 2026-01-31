@@ -25,14 +25,15 @@ public class EmployeeDbContext(DbContextOptions<EmployeeDbContext> options) : Db
             builder.HasKey(e => e.Id);
 
             // Required fields
-            builder.Property(e => e.FirstName).IsRequired();
-            builder.Property(e => e.LastName).IsRequired();
-            builder.Property(e => e.Email).IsRequired();
-            builder.Property(e => e.DocNumber).IsRequired();
+            builder.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
+            builder.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+            builder.Property(e => e.Email).IsRequired().HasMaxLength(200);
+            builder.Property(e => e.DocNumber).IsRequired().HasMaxLength(50);
             builder.Property(e => e.PasswordHash).IsRequired();
 
-            // Unique document number
+            // Unique document number and Email
             builder.HasIndex(e => e.DocNumber).IsUnique();
+            builder.HasIndex(e => e.Email).IsUnique();
 
             // One employee can have many phones
             // EmployeeId is a shadow property (not in domain)
@@ -58,8 +59,7 @@ public class EmployeeDbContext(DbContextOptions<EmployeeDbContext> options) : Db
             builder.HasKey("Id");
 
             // Phone number is required
-            builder.Property(p => p.Number)
-                .IsRequired();
+            builder.Property(p => p.Number).IsRequired().HasMaxLength(20);
         });
 
         // ------------------------------------------------------------

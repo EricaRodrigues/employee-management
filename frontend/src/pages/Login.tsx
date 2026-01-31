@@ -13,6 +13,7 @@ export default function Login() {
     const [error, setError] = useState<string | null>(null); // API error
     const [errors, setErrors] = useState<Record<string, string>>({}); // Field errors
     const [submitted, setSubmitted] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -86,6 +87,7 @@ export default function Login() {
                         <input
                             name="email"
                             value={email}
+                            placeholder="email@company.com"
                             onChange={(e) => {
                                 setEmail(e.target.value);
                                 if (errors.email) {
@@ -114,31 +116,48 @@ export default function Login() {
                         <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-1">
                             Password
                         </label>
-                        <input
-                            name="password"
-                            value={password}
-                            onChange={(e) => {
-                                setPassword(e.target.value);
-                                if (errors.password) {
-                                    setErrors(prev => {
-                                        const copy = { ...prev };
-                                        delete copy.password;
-                                        return copy;
-                                    });
-                                }
-                            }}
-                            className={`w-full bg-[#0b0f1a] border rounded-2xl px-4 py-3 text-sm text-white outline-none transition-all ${
-                                hasError("password")
-                                    ? "border-rose-500 focus:border-rose-500"
-                                    : "border-slate-700 focus:border-indigo-500"
-                            }`}
-                        />
+
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                value={password}
+                                placeholder="••••••••"
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    if (errors.password) {
+                                        setErrors(prev => {
+                                            const copy = { ...prev };
+                                            delete copy.password;
+                                            return copy;
+                                        });
+                                    }
+                                }}
+                                className={`w-full bg-[#0b0f1a] border rounded-2xl px-4 py-3 text-sm text-white outline-none transition-all ${
+                                    hasError("password")
+                                        ? "border-rose-500 focus:border-rose-500"
+                                        : "border-slate-700 focus:border-indigo-500"
+                                }`}
+                            />
+
+                            {/* Toggle password visibility */}
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(prev => !prev)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-sm font-bold"
+                            >
+                                {showPassword ? "Hide" : "Show"}
+                            </button>
+                        </div>
+
                         {hasError("password") && (
                             <p className="text-xs text-rose-500 mt-1">
                                 {errors.password}
                             </p>
                         )}
                     </div>
+                    
+                    
 
                     {error && (
                         <div className="text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl">

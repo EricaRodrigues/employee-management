@@ -1,6 +1,7 @@
 
 // Base employee model returned by API
 import apiClient from "../api/apiClient.ts";
+import type {Role} from "../types/employee.ts";
 
 export type Employee = {
     id: string;
@@ -9,7 +10,7 @@ export type Employee = {
     email: string;
     docNumber: string;
     birthDate: string;
-    role: number;
+    role: Role;
     managerId: string | null;
     phones: string[];
 };

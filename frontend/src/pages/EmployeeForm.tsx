@@ -7,6 +7,7 @@ import {
 } from "../services/employeeService";
 import { getApiErrorMessage } from "../api/apiError";
 import { useAuth } from "../context/useAuth";
+import {ROLE} from "../types/employee.ts";
 
 export default function EmployeeForm() {
     const { id } = useParams();
@@ -21,7 +22,7 @@ export default function EmployeeForm() {
     const [submitted, setSubmitted] = useState(false);
     const [managers, setManagers] = useState<Employee[]>([]);
     const [showPassword, setShowPassword] = useState(false);
-    const maxRoleAllowed = user?.role ?? 1;
+    const maxRoleAllowed = user?.role ?? ROLE.Employee;
 
     const [form, setForm] = useState({
         firstName: "",
@@ -36,7 +37,15 @@ export default function EmployeeForm() {
     });
 
     // Any employee can be a manager, (except themselves)
-    const availableManagers = managers.filter(m => m.id !== id);
+    const availableManagers = managers.filter(m => {
+        if (m.id === id) return false; // never himself
+
+        // Director can have another Director as Manager
+        if (form.role === ROLE.Director && m.role === ROLE.Director) return true;
+
+        // Manager needs to have a higher role
+        return m.role > form.role;
+    });
 
     // Load employee data when editing
     useEffect(() => {
@@ -84,12 +93,29 @@ export default function EmployeeForm() {
         loadManagers();
     }, []);
 
-    // Basic role protection (UI level)
-    if (user?.role === 1) {
+    // Basic role protection (UI level) -- Employee can only edit themselves
+    if (user?.role === ROLE.Employee && (!isEdit || id !== user.id)) {
         navigate("/employees");
         return null;
     }
 
+    function canEditSensitiveFields(user: any, targetRole: number) {
+        if (!user) return false;
+
+        // Can never change own role/manager
+        if (user.id === id) return false;
+
+        // Leader -> only Employee
+        if (user.role === ROLE.Leader) return targetRole === ROLE.Employee;
+
+        // Director -> any
+        if (user.role === ROLE.Director) return true;
+
+        return false;
+    }
+
+    const canEditSensitive = canEditSensitiveFields(user, form.role);
+    
     // Update form state and clear field error while typing
     function handlePhoneChange(index: number, value: string) {
         setForm(prev => {
@@ -133,10 +159,20 @@ export default function EmployeeForm() {
     ) {
         const { name, value } = e.target;
 
-        setForm(prev => ({
-            ...prev,
-            [name]: value,
-        }));
+        setForm(prev => {
+            if (name === "role") {
+                return {
+                    ...prev,
+                    role: Number(value),
+                    managerId: "",
+                };
+            }
+
+            return {
+                ...prev,
+                [name]: value,
+            };
+        });
 
         // Clear error as soon as user starts fixing the field
         if (errors[name]) {
@@ -170,7 +206,7 @@ export default function EmployeeForm() {
         }
 
         if (!form.docNumber.trim()) {
-            errors.docNumber = "Document number is required";
+            errors.docNumber = "Doc number is required";
         }
 
         if (!form.birthDate) {
@@ -178,9 +214,8 @@ export default function EmployeeForm() {
         }
 
         form.phones.forEach((phone: string, index: number) => {
-            if (!phone.trim()) {
-                errors[`phones.${index}`] = "Phone is required";
-            } else if (!isValidPhone(phone)) {
+            // Phone is optional, but if provided it must be valid
+            if (phone.trim() && !isValidPhone(phone)) {
                 errors[`phones.${index}`] = "Invalid phone number";
             }
         });
@@ -243,6 +278,14 @@ export default function EmployeeForm() {
         <div className="min-h-screen bg-[#0b0f1a] flex items-center justify-center p-6">
             <div className="w-full max-w-xl bg-[#161b2c] border border-slate-800 rounded-3xl p-10 shadow-2xl space-y-8">
 
+                <button
+                    type="button"
+                    onClick={() => navigate("/employees")}
+                    className="text-sm text-slate-400 hover:underline"
+                >
+                    ← Back
+                </button>
+                
                 {/* HEADER */}
                 <div className="text-center">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-3xl">
@@ -257,7 +300,7 @@ export default function EmployeeForm() {
                             : "Add a new team member"}
                     </p>
                 </div>
-
+                
                 <form onSubmit={handleSubmit} className="space-y-6">
 
                     {/*First Name*/}
@@ -378,7 +421,6 @@ export default function EmployeeForm() {
                                     className={`w-full bg-[#0b0f1a] border rounded-2xl px-4 py-3 text-white outline-none transition-all pr-12  ${
                                         hasError("password") ? "border-rose-500 focus:border-rose-500" : 'border-slate-700 focus:border-indigo-500'
                                     }`}
-                                    //className="w-full bg-[#0b0f1a] border border-slate-700 rounded-2xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all pr-12"
                                 />
 
                                 {/* Toggle password visibility */}
@@ -457,11 +499,12 @@ export default function EmployeeForm() {
                             name="role"
                             value={form.role}
                             onChange={handleChange}
-                            className="w-full bg-[#0b0f1a] border border-slate-700 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-indigo-500"
-                        >
-                            {maxRoleAllowed >= 1 && <option value={1}>Employee</option>}
-                            {maxRoleAllowed >= 2 && <option value={2}>Leader</option>}
-                            {maxRoleAllowed >= 3 && <option value={3}>Director</option>}
+                            className={`w-full bg-[#0b0f1a] border rounded-2xl px-4 py-3 text-sm text-white outline-none
+                                ${isEdit && !canEditSensitive ? "opacity-50 cursor-not-allowed pointer-events-none" : "focus:border-indigo-500"}
+                            `}>
+                            {maxRoleAllowed >= ROLE.Employee && <option value={ROLE.Employee}>Employee</option>}
+                            {maxRoleAllowed >= ROLE.Leader && <option value={ROLE.Leader}>Leader</option>}
+                            {maxRoleAllowed >= ROLE.Director && <option value={ROLE.Director}>Director</option>}
                         </select>
                     </div>
 
@@ -470,14 +513,24 @@ export default function EmployeeForm() {
                         <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-1">
                             Manager
                         </label>
-
+                        {availableManagers.length === 0 && (
+                            <p className="text-[10px] text-slate-500 mt-1 ml-1">
+                                Managers must have a higher role than the employee
+                            </p>
+                        )}
                         <select
                             name="managerId"
                             value={form.managerId}
                             onChange={handleChange}
-                            className="w-full bg-[#0b0f1a] border border-slate-700 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-indigo-500"
+                            className={`w-full bg-[#0b0f1a] border rounded-2xl px-4 py-3 text-sm text-white outline-none
+                                ${isEdit && !canEditSensitive ? "opacity-50 cursor-not-allowed pointer-events-none" : "focus:border-indigo-500"}
+                            `}
                         >
-                            <option value="">No manager</option>
+                            <option value="">
+                                {availableManagers.length === 0
+                                    ? "Select role first"
+                                    : "No manager"}
+                            </option>
 
                             {availableManagers.map(manager => (
                                 <option key={manager.id} value={manager.id}>
@@ -486,6 +539,7 @@ export default function EmployeeForm() {
                             ))}
                         </select>
                     </div>
+                    
 
                     {error && (
                         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-xl text-sm">

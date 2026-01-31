@@ -1,10 +1,14 @@
 import {useEffect, useState} from "react";
-import {type Employee, getAllEmployees} from "../services/employeeService";
+import {
+    type Employee,
+    getAllEmployees,
+    getEmployeeById
+} from "../services/employeeService";
 import {useAuth} from "../context/useAuth.ts";
 import {useNavigate} from "react-router-dom";
-import {ROLE_LABEL} from "../utils/roles";
 import { deleteEmployee } from "../services/employeeService";
 import { getApiErrorMessage } from "../api/apiError";
+import {ROLE, ROLE_LABEL} from "../types/employee.ts";
 
 export default function Employees() {
     const navigate = useNavigate();
@@ -12,11 +16,13 @@ export default function Employees() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [loggedEmployee, setLoggedEmployee] = useState<Employee | null>(null);
 
     // Load employees on page load
     useEffect(() => {
         async function loadEmployees() {
             setLoading(true);
+            setError(null);
             try {
                 const data = await getAllEmployees();
                 setEmployees(data);
@@ -30,17 +36,78 @@ export default function Employees() {
         loadEmployees();
     }, []);
 
+    useEffect(() => {
+        async function loadLoggedUser() {
+            setError(null);
+            
+            if (!user) return;
+
+            try {
+                const data = await getEmployeeById(user.id);
+                setLoggedEmployee(data);
+            } catch (err) {
+                console.error("Failed to load logged user", err);
+            }
+        }
+
+        loadLoggedUser();
+    }, [user]);
+
+    // Helpers de permissão (UI level)
+    function canEdit(user: any, target: any) {
+        if (!user) return false;
+
+        // Can edit yourself
+        if (user.id === target.id) return true;
+
+        // Leader -> only Employee
+        if (user.role === ROLE.Leader) return target.role === ROLE.Employee;
+
+        // Director -> all
+        if (user.role === ROLE.Director) return true;
+
+        return false;
+    }
+
+    function canDelete(user: any, target: any) {
+        if (!user) return false;
+        
+        // Can never delete yourself
+        if (user.id === target.id) return false;
+
+        // Employee can never delete
+        if (user.role === ROLE.Employee) return false;
+
+        // Leader -> only Employee
+        if (user.role === ROLE.Leader) return target.role === ROLE.Employee;
+
+        // Director -> can delete any other (including Director)
+        if (user.role === ROLE.Director) return true;
+
+        return false;
+    }
+    
     // Helper to get manager full name from managerId
-    function getManagerName(
-        managerId: string | null,
-        employees: Employee[]
-    ) {
+    function getManagerName(managerId: string | null, employees: Employee[]) {
         if (!managerId) return "-";
 
         const manager = employees.find(e => e.id === managerId);
         return manager
             ? `${manager.firstName} ${manager.lastName}`
             : "-";
+    }
+
+    // Handle Delete
+    async function handleDelete(e: Employee) {
+        if (!confirm("Delete this employee?")) return;
+        try {
+            await deleteEmployee(e.id);
+            setEmployees(prev =>
+                prev.filter(item => item.id !== e.id)
+            );
+        } catch (err) {
+            setError(getApiErrorMessage(err));
+        }
     }
 
     if (loading) { // Show loading state while fetching employees
@@ -73,7 +140,15 @@ export default function Employees() {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6">
+
+                        {/* Logged user info */}
+                        {loggedEmployee && (
+                            <p className="text-slate-400 text-sm mt-1">
+                                Welcome, {loggedEmployee.firstName} ({ROLE_LABEL[loggedEmployee.role]})
+                            </p>
+                        )}
+
                         <button
                             onClick={signOut}
                             className="text-sm text-rose-400 hover:underline"
@@ -81,10 +156,10 @@ export default function Employees() {
                             Logout
                         </button>
 
-                        {user && user.role !== 1 && (
+                        {user && user.role !== ROLE.Employee && (
                             <button
                                 onClick={() => navigate("/employees/create")}
-                                className="mt-6 bg-indigo-500 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-400 transition-all"
+                                className="bg-indigo-500 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-400 transition-all"
                             >
                                 Create Employee
                             </button>
@@ -119,10 +194,13 @@ export default function Employees() {
                             <thead className="bg-[#0b0f1a]">
                             <tr>
                                 <th className="px-6 py-4 text-left text-[10px] uppercase font-black tracking-widest text-slate-500">
-                                    Name
+                                    First Name
                                 </th>
                                 <th className="px-6 py-4 text-left text-[10px] uppercase font-black tracking-widest text-slate-500">
                                     Email
+                                </th>
+                                <th className="px-6 py-4 text-left text-[10px] uppercase font-black tracking-widest text-slate-500">
+                                    Doc Number
                                 </th>
                                 <th className="px-6 py-4 text-left text-[10px] uppercase font-black tracking-widest text-slate-500">
                                     Role
@@ -137,52 +215,62 @@ export default function Employees() {
                             </thead>
 
                             <tbody>
-                            {employees.map(emp => (
-                                <tr
-                                    key={emp.id}
-                                    className="border-t border-slate-800 hover:bg-[#0b0f1a]/40 transition-all"
-                                >
-                                    <td className="px-6 py-4 text-white font-medium">
-                                        {emp.firstName} {emp.lastName}
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-400 text-sm">
-                                        {emp.email}
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-300 text-sm">
-                                        {ROLE_LABEL[emp.role] ?? "Unknown"}
-                                    </td>
-                                    <td className="p-3 text-slate-400">
-                                        {getManagerName(emp.managerId, employees)}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        {user && user.role !== 1 && (
-                                            <div className="flex justify-end gap-4 text-sm">
-                                                <button
-                                                    onClick={() => navigate(`/employees/${emp.id}/edit`)}
-                                                    className="text-indigo-400 hover:underline"
-                                                >
-                                                    Edit
-                                                </button>
+                            {employees.map(emp => {
 
-                                                <button
-                                                    onClick={async () => {
-                                                        if (!confirm("Delete this employee?")) return;
-                                                        try {
-                                                            await deleteEmployee(emp.id);
-                                                            setEmployees(prev => prev.filter(e => e.id !== emp.id));
-                                                        } catch (err) {
-                                                            setError(getApiErrorMessage(err));
-                                                        }
-                                                    }}
-                                                    className="text-rose-400 hover:underline"
-                                                >
-                                                    Delete
-                                                </button>
+                                const showEdit = canEdit(user, emp);
+                                const showDelete = canDelete(user, emp);
+
+                                return (
+                                    <tr
+                                        key={emp.id}
+                                        className="border-t border-slate-800 hover:bg-[#0b0f1a]/40 transition-all"
+                                    >
+                                        <td className="px-6 py-4 text-white font-medium">
+                                            {emp.firstName}
+                                        </td>
+
+                                        <td className="px-6 py-4 text-slate-400 text-sm">
+                                            {emp.email}
+                                        </td>
+
+                                        <td className="px-6 py-4 text-slate-400 text-sm">
+                                            {emp.docNumber}
+                                        </td>
+
+                                        <td className="px-6 py-4 text-slate-300 text-sm">
+                                            {ROLE_LABEL[emp.role] ?? "Unknown"}
+                                        </td>
+
+                                        <td className="p-3 text-slate-400">
+                                            {getManagerName(emp.managerId, employees)}
+                                        </td>
+
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex justify-end gap-4 text-sm">
+
+                                                {showEdit && (
+                                                    <button
+                                                        onClick={() => navigate(`/employees/${emp.id}/edit`)}
+                                                        className="text-indigo-400 hover:underline"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                )}
+
+                                                {showDelete && (
+                                                    <button
+                                                        onClick={() => handleDelete(emp)}
+                                                        className="text-rose-400 hover:underline"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                )}
+
                                             </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                             </tbody>
                         </table>
                     )}

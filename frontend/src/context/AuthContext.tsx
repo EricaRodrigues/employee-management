@@ -2,12 +2,15 @@ import { login } from '../services/authService';
 import {createContext, type ReactNode, useEffect, useState} from "react";
 import type {AuthUser, LoginRequest} from "../types/auth.ts";
 import { jwtDecode } from "jwt-decode";
+import {mapRoleToNumber} from "../types/employee.ts";
 
 // JWT payload based on backend token structure
 interface JwtPayload {
-    nameId: string;
-    role: string;
-    expiration: number;
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": string;
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role": string;
+    exp: number;
+    iss: string;
+    aud: string;
 }
 
 // Public contract exposed by the AuthContext
@@ -34,9 +37,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const decoded = jwtDecode<JwtPayload>(token);
 
+        // Normalize backend JWT claims to frontend user model
         const authUser: AuthUser = {
-            id: decoded.nameId,
-            role: Number(decoded.role),
+            id: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"],
+            role: mapRoleToNumber(
+                decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
+            ),
         };
 
         localStorage.setItem('@employee:token', token);

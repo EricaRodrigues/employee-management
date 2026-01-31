@@ -23,6 +23,13 @@ public class EmployeeRepository(EmployeeDbContext context) : IEmployeeRepository
         return await context.Employees
             .AnyAsync(e => e.DocNumber == docNumber);
     }
+    
+    // Checks if email already exists
+    public async Task<bool> ExistsByEmailAsync(string email)
+    {
+        return await context.Employees
+            .AnyAsync(e => e.Email == email);
+    }
 
     // Gets employee by id
     public async Task<Employee?> GetByIdAsync(Guid id)

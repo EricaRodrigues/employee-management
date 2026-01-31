@@ -38,36 +38,86 @@ The application is containerized to simplify local setup and ensure environment 
 
 ---
 
-## Business Rules
+### Layers responsibility
+- API
+  - Controllers
+  - Authentication
+  - Exception handling
+- Application
+  - Services
+  - Business rules
+  - Validations
+- Domain
+  - Entities
+  - Enums
+- Infrastructure
+  - EF Core
+  - Database
+  - Repositories
 
-- An employee must have:
-    - First name, last name, email and document number (unique)
-    - Must be at least 18 years old
-    - Can have multiple phone numbers
-    - Optional manager (another employee)
-
-### Role hierarchy
-- Employee
-- Leader
-- Director
-
-Main rules:
-- A user cannot create or update an employee with a higher role than their own
-- A user cannot change their own role
-- Deletion respects hierarchy:
-    - Employee cannot delete anyone
-    - Leader can delete only Employees
-    - Director can delete any user (except themselves)
+Controllers are intentionally thin.
+All business decisions are centralized in the Service layer, making the system easier to test, reason about and evolve.
 
 ---
 
-## Features
+### Core Business Rules
 
-- JWT authentication
-- Full employee CRUD
-- Business validations centralized in the Service layer
-- Structured logs (creation, update, deletion and errors)
-- Unit tests covering the main scenarios
+Employee
+
+An employee must:
+- First name, last name, email and document number
+- Must be at least 18 years old
+- Unique email and document number
+- Can have zero or more phone numbers
+- Optionally manager (another employee)
+
+---
+
+### Role hierarchy
+```bash
+Employee < Leader < Director
+```
+---
+
+Creation Rules
+
+| Who creates | Employee | Leader | Director |
+|------------|----------|--------|----------|
+| Employee   | ❌       | ❌     | ❌       |
+| Leader     | ✅       | ❌     | ❌       |
+| Director   | ✅       | ✅     | ✅       |
+
+---
+Update Rules
+- Users can always edit their own personal data
+- Users cannot change their own role
+- Users cannot assign a role higher than their own
+- Password editing is intentionally disabled in this version
+
+| Who edits | Self | Employee | Leader | Director |
+|-----------|------|---------|--------|----------|
+| Employee  | ✅    | ❌       | ❌      | ❌   |
+| Leader    | ✅    | ✅       | ❌      | ❌   |
+| Director  | ✅    | ✅       | ✅      | ✅   |
+
+---
+
+Deletion Rules
+
+| Who deletes | Self | Employee | Leader | Director |
+|-------------|---|---------|--------|----------|
+| Employee    | ❌  | ❌       | ❌      | ❌   |
+| Leader      | ❌  | ✅       | ❌      | ❌   |
+| Director    | ❌  | ✅       | ✅      | ✅   |
+
+---
+
+Manager Rules
+- An employee cannot be their own manager
+- Manager must always have a higher role
+- Employee cannot be a manager
+- Leader can manage Employees only
+- Director can manage any role
 
 ---
 
@@ -81,9 +131,9 @@ Permission rules are not handled in controllers, but enforced in the service lay
 
 ---
 
-## Seed
+## Seed Data
 
-To simplify local testing, a **default admin user is created via migration**:
+A default admin user is created via migration to simplify testing:
 
 ```bash
 Email: admin@company.com
@@ -92,6 +142,35 @@ Role: Director
 ```
 
 > This seed exists only for testing and evaluation purposes.
+
+---
+
+## Logging
+
+Serilog is used to generate structured logs for:
+
+- Creation
+- Updates
+- Deletions
+- Authorization errors
+
+---
+
+## Tests
+
+Unit tests cover:
+- Valid and invalid creation
+- Underage validation
+- Duplicate email and document number
+- Manager rules
+- Role hierarchy rules
+- Update and delete scenarios
+- Authentication
+
+To run unit tests:
+```bash
+dotnet test
+```
 
 ---
 
@@ -113,24 +192,6 @@ dotnet run --project src/EmployeeManagement.API
 Swagger:
 ```bash
 /swagger
-```
-
----
-
-## Tests
-
-Unit tests cover:
-- Valid creation
-- Underage validation
-- Duplicate document
-- Non-existent manager
-- Role hierarchy rules
-- Update and delete scenarios
-- Authentication
-
-To run unit tests:
-```bash
-dotnet test
 ```
 
 ---

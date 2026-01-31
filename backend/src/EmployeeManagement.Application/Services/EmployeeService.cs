@@ -254,6 +254,9 @@ public class EmployeeService(IEmployeeRepository employeeRepository, ILogger<Emp
 
         if (employeeToDelete is null)
             throw new BusinessException("Employee not found.");
+        
+        if (await employeeRepository.HasSubordinatesAsync(employeeId))
+            throw new BusinessException("You cannot delete an employee who is a manager of other employees.");
 
         // Authorization rules
         switch (currentEmployee.Role)

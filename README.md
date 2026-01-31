@@ -103,6 +103,8 @@ Update Rules
 ---
 
 Deletion Rules
+- An employee cannot be deleted if they are a manager of other employees
+- Subordinates must be reassigned or removed first
 
 | Who deletes | Self | Employee | Leader | Director |
 |-------------|---|---------|--------|----------|
@@ -168,6 +170,9 @@ Unit tests cover:
 - Authentication
 
 To run unit tests:
+
+From the `backend` folder:
+
 ```bash
 dotnet test
 ```
@@ -176,22 +181,40 @@ dotnet test
 
 ## How to Run
 
+The backend and database are fully containerized using Docker Compose.
+
+### Prerequisites
+- Docker
+- Docker Compose
+
+### Start the application
+
 From the `backend` folder:
 
 Start the database:
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
-Run the API:
+This will start:
+- PostgreSQL database
+- .NET 8 API
 
+### Access Swagger
+
+Once the containers are running:
 ```bash
-dotnet run --project src/EmployeeManagement.API
+http://localhost:8080/swagger
 ```
 
-Swagger:
+### Default admin user (seed)
+
+A default Director user is created automatically for testing purposes:
+
 ```bash
-/swagger
+Email: admin@company.com
+Password: Admin@123
+Role: Director
 ```
 
 ---
@@ -213,7 +236,7 @@ The app consumes a .NET 8 REST API and focuses on clean UI, proper validations, 
 - JWT login and protected routes
 - Role-based access (Employee, Leader, Director)
 - Employee list with create, edit and delete
-- Manager selection (any employee can be a manager)
+- Manager selection (only leaders and directors can be managers)
 - Client-side form validation
 - Dynamic phone fields (add / remove)
 - Clear error handling and feedback

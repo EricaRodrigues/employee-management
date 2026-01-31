@@ -29,6 +29,7 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://0.0.0.0:8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=employee_db;Username=postgres;Password=postgres
       Jwt__Key: e93b0761ac89b47974a69b5121e0f4cfdd77a847d37ae73e5a904cb08fa79843!
       Jwt__Issuer: EmployeeManagement

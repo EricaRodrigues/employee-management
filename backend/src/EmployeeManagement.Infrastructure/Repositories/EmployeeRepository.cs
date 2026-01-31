@@ -66,4 +66,11 @@ public class EmployeeRepository(EmployeeDbContext context) : IEmployeeRepository
         context.Employees.Remove(employee);
         await context.SaveChangesAsync();
     }
+    
+    // Check if manager has employee
+    public async Task<bool> HasSubordinatesAsync(Guid managerId)
+    {
+        return await context.Employees
+            .AnyAsync(e => e.ManagerId == managerId);
+    }
 }

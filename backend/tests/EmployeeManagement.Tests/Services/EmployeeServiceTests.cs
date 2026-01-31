@@ -1377,4 +1377,35 @@ public class EmployeeServiceTests
             .ThrowAsync<BusinessException>()
             .WithMessage("You cannot delete yourself.");
     }
+    
+    [Fact]
+    public async Task DeleteAsync_ShouldThrowException_WhenEmployeeHasSubordinates()
+    {
+        var repositoryMock = new Mock<IEmployeeRepository>();
+
+        var director = CreateEmployee(EmployeeRoleEnum.Director);
+        var manager = CreateEmployee(EmployeeRoleEnum.Leader);
+
+        repositoryMock
+            .Setup(r => r.GetByIdAsync(director.Id))
+            .ReturnsAsync(director);
+
+        repositoryMock
+            .Setup(r => r.GetByIdAsync(manager.Id))
+            .ReturnsAsync(manager);
+
+        repositoryMock
+            .Setup(r => r.HasSubordinatesAsync(manager.Id))
+            .ReturnsAsync(true);
+
+        var service = CreateService(repositoryMock);
+
+        Func<Task> act = async () =>
+            await service.DeleteAsync(manager.Id, director.Id);
+
+        await act
+            .Should()
+            .ThrowAsync<BusinessException>()
+            .WithMessage("You cannot delete an employee who is a manager of other employees.");
+    }
 }
